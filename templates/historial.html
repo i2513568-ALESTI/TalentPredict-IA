@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+
+{% block title %}Historial de Predicciones (Capa Gold) - TalentPredict AI{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-lg-5 mb-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-clock-history text-primary me-2"></i>Historial de Predicciones Realizadas
+            </h2>
+            <p class="text-muted mb-0">Auditoría y trazabilidad de inferencias registradas en la tabla <strong>public.gold_predictions</strong> de Supabase.</p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            <a href="/predict" class="btn btn-warning fw-bold text-dark">
+                <i class="bi bi-plus-circle me-1"></i> Nueva Evaluación
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabla de Historial -->
+    <div class="card card-stat bg-white overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID Predicción</th>
+                        <th>Fecha y Hora (UTC)</th>
+                        <th>ID Empleado</th>
+                        <th>Predicción (Attrition)</th>
+                        <th>Probabilidad (%)</th>
+                        <th>Nivel de Riesgo</th>
+                        <th>Versión del Modelo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if history %}
+                        {% for item in history %}
+                        <tr>
+                            <td class="fw-bold text-secondary">#{{ item.id }}</td>
+                            <td>{{ item.created_at_str }}</td>
+                            <td>
+                                {% if item.employee_number %}
+                                <span class="badge text-bg-light border text-dark">Empleado #{{ item.employee_number }}</span>
+                                {% else %}
+                                <span class="text-muted small">Nuevo Postulante</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.prediction == 'Yes' %}
+                                <span class="badge text-bg-danger">Yes (Rotación)</span>
+                                {% else %}
+                                <span class="badge text-bg-success">No (Permanencia)</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold">{{ (item.probability * 100) | round(1) }}%</td>
+                            <td>
+                                <span class="badge badge-risk-{{ item.risk_level }} px-2 py-1">
+                                    {{ item.risk_level }}
+                                </span>
+                            </td>
+                            <td><small class="text-muted font-monospace">{{ item.model_version }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay predicciones registradas aún en la capa Gold.<br>
+                                <a href="/predict" class="btn btn-sm btn-outline-primary mt-2">Realizar la primera predicción</a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}

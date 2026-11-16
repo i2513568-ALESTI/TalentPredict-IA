@@ -1,0 +1,384 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard Principal - TalentPredict AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-5">
+    <!-- Header de bienvenida -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-speedometer2 text-primary me-2"></i>Dashboard de People Analytics
+            </h2>
+            <p class="text-muted mb-0">Monitoreo en tiempo real del riesgo de rotación laboral y analítica de personal.
+            </p>
+        </div>
+        <div class="mt-3 mt-md-0 d-flex gap-2">
+            <a href="/controles" class="btn btn-outline-primary">
+                <i class="bi bi-table me-1"></i> Ver Plantilla de Personal
+            </a>
+            <a href="/predict" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Nueva Evaluación
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de KPIs Globales -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Total Empleados</span>
+                        <h3 class="fw-bold my-1 text-dark">{{ kpis.total_employees | default(1470) }}</h3>
+                        <span class="badge text-bg-light text-secondary border">100% Cartera Activa</span>
+                    </div>
+                    <div class="icon-box bg-primary-subtle text-primary">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Retención (No Rotación)</span>
+                        <h3 class="fw-bold my-1 text-success">{{ kpis.total_retained | default(1233) }}</h3>
+                        <span class="badge text-bg-success-subtle text-success border border-success-subtle">
+                            {{ ((kpis.total_retained / kpis.total_employees) * 100) | round(1) if kpis.total_employees
+                            else 83.9 }}% Retenidos
+                        </span>
+                    </div>
+                    <div class="icon-box bg-success-subtle text-success">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Deserción Histórica</span>
+                        <h3 class="fw-bold my-1 text-danger">{{ kpis.total_attrition | default(237) }}</h3>
+                        <span class="badge text-bg-danger-subtle text-danger border border-danger-subtle">
+                            {{ kpis.attrition_rate_pct | default(16.12) }}% Tasa de Fuga
+                        </span>
+                    </div>
+                    <div class="icon-box bg-danger-subtle text-danger">
+                        <i class="bi bi-person-x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold text-uppercase">Ingreso Mensual Promedio</span>
+                        <h3 class="fw-bold my-1 text-dark">${{ "{:,.0f}".format(kpis.avg_monthly_income) if
+                            kpis.avg_monthly_income else "6,503" }}</h3>
+                        <span class="badge text-bg-secondary-subtle text-secondary border">Edad media: {{ kpis.avg_age |
+                            default(36.9) }} años</span>
+                    </div>
+                    <div class="icon-box bg-warning-subtle text-warning">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Distribución de Riesgos Gold y Modelo ML -->
+    <div class="card card-stat p-4 bg-white mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h5 class="fw-bold mb-2">
+                    <i class="bi bi-cpu text-primary me-2"></i>Estado del Modelo Predictivo (RandomForest v1.0)
+                </h5>
+                <p class="text-muted small mb-3">
+                    Modelo entrenado bajo partición estratificada con <strong>ROC-AUC de 79.6%</strong> y pesos
+                    balanceados. Almacena inferencias en la capa <strong>Gold (Supabase)</strong>.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge badge-risk-BAJO px-3 py-2 fs-6">🟢 Bajo Riesgo: {{ risk_dist.BAJO |
+                            default(0) }}</span>
+                        <small class="text-muted">(&lt; 20% prob.)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge badge-risk-MODERADO px-3 py-2 fs-6">🟡 Riesgo Moderado: {{ risk_dist.MODERADO
+                            | default(0) }}</span>
+                        <small class="text-muted">(20% - 35%)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge badge-risk-ALTO px-3 py-2 fs-6">🔴 Alto Riesgo: {{ risk_dist.ALTO |
+                            default(0) }}</span>
+                        <small class="text-muted">(&ge; 35%)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <a href="/historial" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-clock-history me-1"></i> Ver registro auditable en Gold &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fila 1 de Gráficos Analíticos -->
+    <div class="row g-4 mb-4">
+        <!-- Gráfico 1: Rotación por Departamento -->
+        <div class="col-lg-6">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-building text-primary me-2"></i>Tasa de Rotación por Departamento
+                    </h6>
+                    <span class="badge text-bg-light border">Capa Silver</span>
+                </div>
+                <div style="height: 280px; position: relative;">
+                    <canvas id="chartDept"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 2: Rotación según Horas Extras (OverTime) -->
+        <div class="col-lg-6">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-hourglass-split text-danger me-2"></i>Impacto de las Horas Extras (OverTime)
+                    </h6>
+                    <span class="badge text-bg-light border">Factor Crítico</span>
+                </div>
+                <div style="height: 280px; position: relative;">
+                    <canvas id="chartOverTime"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fila 2 de Gráficos Analíticos -->
+    <div class="row g-4 mb-4">
+        <!-- Gráfico 3: Rotación por Puesto de Trabajo (JobRole) -->
+        <div class="col-lg-7">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-briefcase text-secondary me-2"></i>Porcentaje de Rotación por Puesto de Trabajo
+                    </h6>
+                    <span class="badge text-bg-light border">Riesgo por Rol</span>
+                </div>
+                <div style="height: 320px; position: relative;">
+                    <canvas id="chartJobRole"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 4: Satisfacción Laboral vs Rotación -->
+        <div class="col-lg-5">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-emoji-smile text-warning me-2"></i>Rotación según Satisfacción (1 al 4)
+                    </h6>
+                    <span class="badge text-bg-light border">Encuestas HR</span>
+                </div>
+                <div style="height: 320px; position: relative;">
+                    <canvas id="chartSatisfaction"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fila 3 de Gráficos Analíticos -->
+    <div class="row g-4 mb-4">
+        <!-- Gráfico 5: Distribución de Edades -->
+        <div class="col-lg-6">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-calendar-event text-info me-2"></i>Distribución Demográfica por Grupos de Edad
+                    </h6>
+                    <span class="badge text-bg-light border">Demografía</span>
+                </div>
+                <div style="height: 280px; position: relative;">
+                    <canvas id="chartAge"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 6: Sueldo Promedio por Departamento -->
+        <div class="col-lg-6">
+            <div class="card card-stat p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-wallet2 text-success me-2"></i>Comparación Salarial: Retenidos vs Deserción
+                    </h6>
+                    <span class="badge text-bg-light border">Compensación ($)</span>
+                </div>
+                <div style="height: 280px; position: relative;">
+                    <canvas id="chartIncome"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Cargar datos de gráficos vía API REST interna
+        fetch("/api/analytics")
+            .then(res => res.json())
+            .then(data => {
+                renderCharts(data);
+            })
+            .catch(err => console.error("Error al cargar datos analíticos:", err));
+    });
+
+    function renderCharts(data) {
+        // 1. Chart Dept
+        const deptLabels = data.by_department.map(d => d.department);
+        const deptRates = data.by_department.map(d => d.attrition_pct);
+        new Chart(document.getElementById("chartDept"), {
+            type: "bar",
+            data: {
+                labels: deptLabels,
+                datasets: [{
+                    label: "Tasa de Rotación (%)",
+                    data: deptRates,
+                    backgroundColor: ["#3b82f6", "#10b981", "#f59e0b"],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: "Porcentaje (%)" } }
+                }
+            }
+        });
+
+        // 2. Chart OverTime
+        const otLabels = data.by_overtime.map(d => d.overtime === "Yes" ? "Con Horas Extras" : "Sin Horas Extras");
+        const otRates = data.by_overtime.map(d => d.attrition_pct);
+        new Chart(document.getElementById("chartOverTime"), {
+            type: "bar",
+            data: {
+                labels: otLabels,
+                datasets: [{
+                    label: "% Deserción",
+                    data: otRates,
+                    backgroundColor: ["#ef4444", "#3b82f6"],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: "Tasa de Rotación (%)" } }
+                }
+            }
+        });
+
+        // 3. Chart JobRole (Horizontal)
+        const roleLabels = data.by_job_role.map(d => d.job_role);
+        const roleRates = data.by_job_role.map(d => d.attrition_pct);
+        new Chart(document.getElementById("chartJobRole"), {
+            type: "bar",
+            data: {
+                labels: roleLabels,
+                datasets: [{
+                    label: "% Rotación por Puesto",
+                    data: roleRates,
+                    backgroundColor: "#6366f1",
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: "% Rotación" } }
+                }
+            }
+        });
+
+        // 4. Chart Satisfaction
+        const satLabels = ["1: Muy Bajo", "2: Bajo", "3: Alto", "4: Muy Alto"];
+        const satRates = data.by_satisfaction.map(d => d.attrition_pct);
+        new Chart(document.getElementById("chartSatisfaction"), {
+            type: "line",
+            data: {
+                labels: satLabels,
+                datasets: [{
+                    label: "Tasa de Rotación (%)",
+                    data: satRates,
+                    borderColor: "#f59e0b",
+                    backgroundColor: "rgba(245, 158, 11, 0.15)",
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // 5. Chart Age Group
+        const ageLabels = data.by_age_group.map(d => d.age_group);
+        const ageCounts = data.by_age_group.map(d => d.total);
+        const ageAttrition = data.by_age_group.map(d => d.attrition_count);
+        new Chart(document.getElementById("chartAge"), {
+            type: "bar",
+            data: {
+                labels: ageLabels,
+                datasets: [
+                    { label: "Total Empleados", data: ageCounts, backgroundColor: "#94a3b8", borderRadius: 4 },
+                    { label: "Empleados que Rotaron", data: ageAttrition, backgroundColor: "#f87171", borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        // 6. Chart Income Comparison
+        const incLabels = data.income_by_dept.map(d => d.department);
+        const incRetained = data.income_by_dept.map(d => d.avg_income_retained);
+        const incAttrition = data.income_by_dept.map(d => d.avg_income_attrition);
+        new Chart(document.getElementById("chartIncome"), {
+            type: "bar",
+            data: {
+                labels: incLabels,
+                datasets: [
+                    { label: "Sueldo Promedio Retenidos ($)", data: incRetained, backgroundColor: "#10b981", borderRadius: 4 },
+                    { label: "Sueldo Promedio Deserción ($)", data: incAttrition, backgroundColor: "#ef4444", borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: "Monto en USD ($)" } } }
+            }
+        });
+    }
+</script>
+{% endblock %}
